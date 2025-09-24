@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <label>Username:</label><br>
+            <input type="text" id="username" required><br><br>
+
+            <label>Password:</label><br>
+            <input type="password" id="password" required><br><br>
+
+            <button type="submit">Login</button>
+        </form>
+
+        <p id="message"></p>
+        <p>Don't have an account? <a href="/">Sign up here</a></p>
+    </div>
+    <script>
+        const form = document.getElementById('loginForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+
+            const data = await response.json();
+            document.getElementById('message').innerText = data.message;
+
+            if (response.ok) {
+                setTimeout(() => { window.location.href = '/home'; }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

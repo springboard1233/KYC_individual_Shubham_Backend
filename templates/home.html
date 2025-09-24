@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home - Aadhaar & PAN Upload</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome! Upload Aadhaar Details</h2>
+        <form id="aadhaarForm" enctype="multipart/form-data">
+            <input type="file" id="file" name="file" required><br><br>
+            <button type="submit">Upload & Extract</button>
+        </form>
+
+        <pre id="result"></pre>
+        <button id="saveBtn" style="display:none;">Save to Database</button>
+
+        <hr>
+
+        <h2>Upload PAN Card Details</h2>
+        <form id="panForm" enctype="multipart/form-data">
+            <input type="file" id="panFile" name="file" required><br><br>
+            <button type="submit">Upload & Extract PAN</button>
+        </form>
+
+        <pre id="panResult"></pre>
+        <button id="savePanBtn" style="display:none;">Save PAN to Database</button>
+    </div>
+    <script>
+        let extractedData = {};      // Aadhaar
+        let extractedPanData = {};   // PAN
+
+        // -------- Aadhaar Upload & Extract --------
+        const form = document.getElementById('aadhaarForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('file');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch('/api/extract', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            extractedData = data;
+            document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+
+            document.getElementById('saveBtn').style.display = 'inline-block';
+        });
+
+        // Save Aadhaar
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.addEventListener('click', async () => {
+            if (!extractedData || Object.keys(extractedData).length === 0) {
+                alert("No data to save. Please extract Aadhaar first.");
+                return;
+            }
+
+            const response = await fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(extractedData)
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        });
+
+        // -------- PAN Upload & Extract --------
+        const panForm = document.getElementById('panForm');
+        panForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const panFileInput = document.getElementById('panFile');
+            const formData = new FormData();
+            formData.append('file', panFileInput.files[0]);
+
+            const response = await fetch('/api/extract_pan', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            extractedPanData = data;
+            document.getElementById('panResult').innerText = JSON.stringify(data, null, 2);
+
+            document.getElementById('savePanBtn').style.display = 'inline-block';
+        });
+
+        // Save PAN
+        const savePanBtn = document.getElementById('savePanBtn');
+        savePanBtn.addEventListener('click', async () => {
+            if (!extractedPanData || Object.keys(extractedPanData).length === 0) {
+                alert("No PAN data to save. Please extract PAN first.");
+                return;
+            }
+
+            const response = await fetch('/api/save_pan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(extractedPanData)
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        });
+    </script>
+</body>
+</html>

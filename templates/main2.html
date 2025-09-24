@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Powered KYC</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    /* Header */
+    header {
+      background-color: black;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 15px;
+    }
+
+    .header-buttons button {
+      background-color: #FF9800;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .header-buttons button:hover {
+      background-color: #0f5ad3;
+    }
+
+    /* Middle Section */
+    .hero {
+      position: relative;
+      height: 400px;
+      background: url('https://via.placeholder.com/1500x400') no-repeat center center/cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .hero-text {
+      font-size: 50px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.28);
+      padding: 20px 40px;
+      border-radius: 8px;
+    }
+
+    /* Footer */
+    footer {
+      background-color: #FF9800;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    footer h2 {
+      margin-bottom: 30px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .services {
+      display: flex;
+      justify-content: center;
+      gap: 100px;
+      flex-wrap: wrap;
+    }
+
+    .service-box {
+      background-color: rgba(0, 0, 0, 0.28);
+      padding: 25px;
+      flex: 1;
+      max-width: 250px;
+      border-radius: 8px;
+      font-size: 20px;
+    }
+
+    /* Modal Forms (Signup & Login) */
+    .modal {
+      display: none; /* hidden by default */
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #fff;
+      color: #000;
+      width: 35%;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0px 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .modal-content h2 {
+      margin-bottom: 20px;
+      color: #FF9800;
+    }
+
+    .modal-content input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    .modal-content button {
+      background-color: #FF9800;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .modal-content button:hover {
+      background-color: #0f5ad3;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <h1>AI KYC</h1>
+    <div class="header-buttons">
+      <button onclick="openSignupForm()">Signup</button>
+      <button onclick="openLoginForm()">Login</button>
+    </div>
+  </header>
+
+  <!-- Middle Section -->
+  <section class="hero">
+    <div class="hero-text">
+      AI POWERED KYC AND IDENTITY VERIFICATION
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <h2>OUR KEY SERVICES</h2>
+    <div class="services">
+      <div class="service-box">OCR EXTRACTION FEATURE</div>
+      <div class="service-box">KYC VIA AI</div>
+      <div class="service-box">IDENTITY VERIFICATION VIA AI</div>
+    </div>
+  </footer>
+
+  <!-- Signup Form Modal -->
+  <div class="modal" id="signupModal">
+    <div class="modal-content">
+      <h2>Signup Form</h2>
+      <input type="text" placeholder="Firstname" required>
+      <input type="text" placeholder="Lastname" required>
+      <input type="email" placeholder="Email" required>
+      <input type="password" placeholder="Password" required>
+      <br>
+      <button onclick="closeSignupForm()">Sign Up</button>
+    </div>
+  </div>
+
+  <!-- Login Form Modal -->
+  <div class="modal" id="loginModal">
+    <div class="modal-content">
+      <h2>Login Form</h2>
+      <input type="email" placeholder="Email" required>
+      <input type="password" placeholder="Password" required>
+      <br>
+      <button onclick="closeLoginForm()">Login</button>
+    </div>
+  </div>
+
+  <!-- Script -->
+  <script>
+    function openSignupForm() {
+      document.getElementById("signupModal").style.display = "flex";
+    }
+    function closeSignupForm() {
+      document.getElementById("signupModal").style.display = "none";
+    }
+
+    function openLoginForm() {
+      document.getElementById("loginModal").style.display = "flex";
+    }
+    function closeLoginForm() {
+      document.getElementById("loginModal").style.display = "none";
+    }
+  </script>
+
+</body>
+</html>
