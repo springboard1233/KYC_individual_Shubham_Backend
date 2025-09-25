@@ -73,7 +73,7 @@ kyc_col = db["kyc_submissions"]
 # ---------- HTML Page Routes ----------
 @app.route('/')
 def index():
-    return render_template('m.html')
+    return render_template('main.html')
 
 #@app.route('/login')
 #def login_page():
@@ -81,11 +81,11 @@ def index():
 
 @app.route('/home')
 def home_page():
-    return render_template('hhome1.html')
+    return render_template('home.html')
 
 @app.route('/admin-dashboard')
 def admin_page():
-    return render_template('a_search1.html')
+    return render_template('admin_panel.html')
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
