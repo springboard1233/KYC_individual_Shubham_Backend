@@ -25,7 +25,8 @@ from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-
+from pdf2image import convert_from_bytes
+from pdf2image import convert_from_path
 
 from rapidfuzz import fuzz
 
@@ -64,7 +65,8 @@ aadhaar_audit = db['aadhaar_audit_trail']
 pan_audit = db['pan_audit_trail']
 users_collection = db['users']
 otp_collection = db['otp_store']  # new collection for OTPs
-kyc_col = db["kyc_submissions"]
+#kyc_col = db["kyc_submissions"]
+kyc_col = db["new_table"]
 
 
 #db = client["kyc_db"]
@@ -85,7 +87,7 @@ def home_page():
 
 @app.route('/admin-dashboard')
 def admin_page():
-    return render_template('admin_panel.html')
+    return render_template('admin.html')
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
@@ -137,6 +139,10 @@ def get_embedding(img_path):
     with torch.no_grad():
         emb = cnn_model(img)
     return emb.numpy()
+
+
+
+
 
 # Precompute reference embeddings
 AADHAAR_TEMPLATE = get_embedding("layout/aadhaar_card.png")
@@ -552,7 +558,7 @@ def serialize_audit(doc):
         "date": doc.get("date"),
         "time": doc.get("time"),
         #"timestamp": doc.get("timestamp").isoformat() if isinstance(doc.get("timestamp"), datetime) else str(doc.get("timestamp")),
-        #"status": doc.get("status"),
+        "status": doc.get("status"),
         "fraud_score": doc.get("fraud_score")
         #"risk_level": doc.get("risk_level")
     }
@@ -608,6 +614,32 @@ def admin_user_details(user_id):
 #    return jsonify({"message": f"Status updated to {status}"})
 
 
+#@app.route("/api/admin/update_status", methods=["POST"])
+#@admin_required
+#def update_status():
+#    data = request.get_json()
+#    user_id = data.get("user_id")
+#    status = data.get("status")
+
+#    if status not in ["Pending", "Approved", "Rejected"]:
+#        return jsonify({"error": "Invalid status"}), 400
+
+    # Update KYC status
+#    result = kyc_col.update_one({"user_id": user_id}, {"$set": {"status": status}})
+#    if result.matched_count == 0:
+#        return jsonify({"error": "User not found"}), 404
+
+
+    # Get user email
+    #user = users_collection.find_one({"user_id": user_id})
+#    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    # user = users_collection.find_one({"_id":user_id})
+#    if user and "email" in user:
+#        send_status_email(user["email"], status)
+
+#    return jsonify({"message": f"Status updated to {status}"})
+
+
 @app.route("/api/admin/update_status", methods=["POST"])
 @admin_required
 def update_status():
@@ -618,19 +650,37 @@ def update_status():
     if status not in ["Pending", "Approved", "Rejected"]:
         return jsonify({"error": "Invalid status"}), 400
 
-    # Update KYC status
+    # Update KYC status (main table)
     result = kyc_col.update_one({"user_id": user_id}, {"$set": {"status": status}})
     if result.matched_count == 0:
         return jsonify({"error": "User not found"}), 404
 
-    # Get user email
-    #user = users_collection.find_one({"user_id": user_id})
+    # Update latest Aadhaar audit record
+    latest_audit = aadhaar_audit.find_one(
+        {"user_id": user_id}, sort=[("_id", -1)]
+    )
+    if latest_audit:
+        aadhaar_audit.update_one(
+            {"_id": latest_audit["_id"]},
+            {"$set": {"status": status}}
+        )
+
+    # Update latest pan audit record
+    latest_audit = pan_audit.find_one(
+        {"user_id": user_id}, sort=[("_id", -1)]
+    )
+    if latest_audit:
+        pan_audit.update_one(
+            {"_id": latest_audit["_id"]},
+            {"$set": {"status": status}}
+        )
+    # Send email to user
     user = users_collection.find_one({"_id": ObjectId(user_id)})
-    # user = users_collection.find_one({"_id":user_id})
     if user and "email" in user:
         send_status_email(user["email"], status)
 
     return jsonify({"message": f"Status updated to {status}"})
+
 
 
 
@@ -652,20 +702,70 @@ def extract_aadhaar():
     if not user_id:
         return jsonify({"error": "Token expired or invalid"}), 401
 
+################################################################
+    #file = request.files.get('file')
+    #if not file:
+    #    return jsonify({"error": "No file uploaded"}), 400
+    ##file.save(filepath)
+
+
+    #doc_type = 'aadhaar'# or 'pan'
+    #filename = secure_filename(f"{user_id}_{doc_type}.jpg")
+    #filepath = os.path.join(UPLOAD_FOLDER,filename)
+    #file.save(filepath)
+###############################################################
+
+
+
+    #from werkzeug.utils import secure_filename
+
+    #import os
+
+    ALLOWED_IMAGE_EXT = {'jpg', 'jpeg', 'png'}
+    ALLOWED_PDF_EXT = {'pdf'}
 
     file = request.files.get('file')
-    if not file:
+    if not file or file.filename == '':
         return jsonify({"error": "No file uploaded"}), 400
-    #file.save(filepath)
 
+    ext = file.filename.rsplit('.', 1)[-1].lower()
+    doc_type = 'aadhaar'
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-    doc_type = 'aadhaar'# or 'pan'
-    filename = secure_filename(f"{user_id}_{doc_type}.jpg")
-    filepath = os.path.join(UPLOAD_FOLDER,filename)
-    file.save(filepath)
+    if ext in ALLOWED_IMAGE_EXT:
+        # Save image directly
+        filename = secure_filename(f"{user_id}_{doc_type}.{ext}")
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
 
-    uploaded_emb = get_embedding(filepath)
+        # Process image
+        uploaded_emb = get_embedding(filepath)
 
+    elif ext in ALLOWED_PDF_EXT:
+        # Convert PDF in memory to JPG
+        pdf_bytes = file.read()  # Read PDF bytes from upload
+        try:
+            pages = convert_from_bytes(
+                pdf_bytes,
+                dpi=300,
+                first_page=1,
+                last_page=1,
+                poppler_path=r"C:\poppler\poppler-25.07.0\Library\bin"
+            )
+        except Exception as e:
+            return jsonify({"error": f"Failed to convert PDF: {e}"}), 400
+
+        first_page = pages[0]
+        filepath = os.path.join(UPLOAD_FOLDER, f"{user_id}_{doc_type}.jpg")
+        first_page.save(filepath, 'JPEG')
+
+        # Process converted image
+        uploaded_emb = get_embedding(filepath)
+
+    else:
+        return jsonify({"error": "Unsupported file type"}), 400
+
+    #uploaded_emb = get_embedding(filepath)
     sim = cosine_similarity(AADHAAR_TEMPLATE, uploaded_emb)[0][0]
     sim  = float(sim)
     print("Similarity:", sim)
@@ -737,7 +837,7 @@ def save_aadhaar():
     # 2. Hash & Duplicate Check
     aadhaar_hash = hash_value(aadhaar_num)
     duplicate = kyc_col.find_one({"aadhaar.number_hash": aadhaar_hash})
-    print("duplicate value:  ",duplicate)
+    #print("duplicate value:  ",duplicate)
 
 
     r = kyc_col.find_one(
@@ -877,18 +977,63 @@ def extract_pan():
         return jsonify({"error": "Token expired or invalid"}), 401
 
     # 2. Get uploaded file
-    file = request.files.get('file')
-    if not file:
-        return jsonify({"error": "No file uploaded"}), 400
+    #file = request.files.get('file')
+    #if not file:
+    #    return jsonify({"error": "No file uploaded"}), 400
 
     # 3. Save file with unique name
+    #doc_type = 'pan'
+    #filename = secure_filename(f"{user_id}_{doc_type}.jpg")
+    #filepath = os.path.join(UPLOAD_FOLDER, filename)
+    #file.save(filepath)
+
+
+    #uploaded_emb = get_embedding(filepath)
+
+    ALLOWED_IMAGE_EXT = {'jpg', 'jpeg', 'png'}
+    ALLOWED_PDF_EXT = {'pdf'}
+
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({"error": "No file uploaded"}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower()
     doc_type = 'pan'
-    filename = secure_filename(f"{user_id}_{doc_type}.jpg")
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+    if ext in ALLOWED_IMAGE_EXT:
+        # Save image directly
+        filename = secure_filename(f"{user_id}_{doc_type}.{ext}")
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
 
-    uploaded_emb = get_embedding(filepath)
+        # Process image
+        uploaded_emb = get_embedding(filepath)
+
+    elif ext in ALLOWED_PDF_EXT:
+        # Convert PDF in memory to JPG
+        pdf_bytes = file.read()  # Read PDF bytes from upload
+        try:
+            pages = convert_from_bytes(
+                pdf_bytes,
+                dpi=300,
+                first_page=1,
+                last_page=1,
+                poppler_path=r"C:\poppler\poppler-25.07.0\Library\bin"
+            )
+        except Exception as e:
+            return jsonify({"error": f"Failed to convert PDF: {e}"}), 400
+
+        first_page = pages[0]
+        filepath = os.path.join(UPLOAD_FOLDER, f"{user_id}_{doc_type}.jpg")
+        first_page.save(filepath, 'JPEG')
+
+        # Process converted image
+        uploaded_emb = get_embedding(filepath)
+
+    else:
+        return jsonify({"error": "Unsupported file type"}), 400
+
 
     sim = cosine_similarity(PAN_TEMPLATE, uploaded_emb)[0][0]
     print("Similarity:", sim)

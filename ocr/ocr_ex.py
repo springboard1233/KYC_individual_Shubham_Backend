@@ -36,11 +36,32 @@ def extract_pantxt(filepath):
 
     text = ""
 
-    img = cv2.imread(filepath)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray, config='--psm 6',lang="eng")
+    # If PDF → convert first page to image
+    if filepath.lower().endswith(".pdf"):
+        pages = convert_from_path(
+            filepath,
+            dpi=300,
+            first_page=1,
+            last_page=1,
+            poppler_path=r"C:\poppler\poppler-25.07.0\Library\bin"
+        )
+        page = pages[0]
+        temp_img = filepath.replace(".pdf", ".jpg")
+        page.save(temp_img, "JPEG")
+        img = cv2.imread(temp_img)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        text = pytesseract.image_to_string(gray, config='--psm 6', lang="eng")
+        os.remove(temp_img)  # cleanup temporary image
+
+    # If JPG/PNG → read directly
+    elif filepath.lower().endswith((".jpg", ".jpeg", ".png")):
+        img = cv2.imread(filepath)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        text = pytesseract.image_to_string(gray, config='--psm 6', lang="eng")
+
+    else:
+        raise ValueError("Unsupported file type")
 
     return text
-
 
 
