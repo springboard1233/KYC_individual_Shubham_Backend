@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KYC Home</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body {
+      padding: 0px;
+      background: linear-gradient(to right, #cac9c380, #d6d2c78a);
+      overflow-x: hidden;
+    }
+    #sidebar {
+      height: 100%;
+      width: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #4959b2; /*#ada772 */
+      overflow-x: hidden;
+      transition: 0.4s;
+      padding-top: 60px;
+      z-index: 1050;
+    }
+    #sidebar a {
+      padding: 12px 20px;
+      text-decoration: none;
+      font-size: 18px;
+      color: #f8f9fa;
+      display: block;
+      transition: 0.2s;
+    }
+    #sidebar a:hover { background-color: #09186c; } /*#8e885d */
+    #sidebarClose {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 24px;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .container-flex { display: flex; justify-content: center; margin-top: 10px; }
+    .aadhaar-section, .pan-section, .home-section { width: 60%; display: none; }
+
+    .aadhaar-section,.pan-section {margin-bottom: 60px;}
+
+
+    .card {
+      background: #f8f9fa;
+      transition: /*transform 0.2s ease,*/ box-shadow 0.2s ease;
+    }
+    /*.card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }*/
+
+    .json-output {
+      background-color: #fff;
+      border: 2px solid #dee2e6;
+      padding: 10px;
+      font-size: 0.9rem;
+      border-radius: 6px;
+    }
+    .progress-status { font-size: 1.4rem; margin-left: 10px; }
+
+    .result-modal-body {
+        height: 80vh;              /* 60% of viewport height */
+                  /* prevent outer scroll -> overflow: hidden;*/
+      }
+
+      .result-tab-content {
+        height: 100%;
+        overflow-y: auto;          /* vertical scroll for tab content */
+        padding-right: 10px;       /* space for scrollbar */
+      }
+
+      #resultTabsContent {
+        height: 100%;         /* force full height */
+        overflow-y: auto;      /* enable vertical scrolling */
+        padding-right: 10px;   /* space for scrollbar */
+      }
+
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+      <span class="navbar-toggler-icon" style="cursor:pointer;" onclick="openSidebar()"></span>
+      <a class="navbar-brand ms-3" href="#">KYC Portal</a>
+      <div class="collapse navbar-collapse justify-content-end">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <button class="btn btn-success me-2" onclick="fetchResult()">Result</button>
+          </li>
+          <li class="nav-item">
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <span id="sidebarClose" onclick="closeSidebar()">&times;</span>
+    <a href="#" onclick="showSection('home-section')">Home</a>
+    <a href="#" onclick="showSection('aadhaar-section')">Aadhaar Upload</a>
+    <a href="#" onclick="showSection('pan-section')">PAN Upload</a>
+  </div>
+
+  <h2 class="heading text-center">KYC Verification Portal</h2>
+  <br>
+
+  <!-- Home Section -->
+  <!-- Home Section -->
+<div class="container-flex">
+  <div class="home-section" style="display:block; font-size: 30px; color:#37474F;">
+    <p>
+      Use the sidebar to upload your Aadhaar and PAN documents.
+      <br><br>
+      <b>Steps:</b>
+      <ol>
+        <li>Upload Aadhaar file and save it.</li>
+        <li>Upload PAN file and save it.</li>
+        <li>Click <b>Result</b> to view your KYC verification result.</li>
+      </ol>
+    </p>
+  </div>
+</div>
+
+
+  <!-- Aadhaar Section -->
+  <div class="container-flex">
+    <div class="aadhaar-section" id="aadhaarSectionContainer">
+      <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center rounded-top-4">
+          <h5 class="mb-0"><i class="bi bi-person-vcard me-2"></i>Aadhaar Card Upload</h5>
+        </div>
+        <div class="card-body p-4">
+          <!-- Progress bar -->
+          <div class="d-flex align-items-center mb-3">
+            <div class="progress flex-grow-1" style="height: 20px;">
+              <div id="aadhaarProgress" class="progress-bar bg-info" style="width: 0%"></div>
+            </div>
+            <span id="aadhaarStatus" class="progress-status"></span>
+          </div>
+
+          <div class="mb-3">
+            <label for="aadhaarFile" class="form-label fw-semibold">Upload Aadhaar File</label>
+            <input type="file" id="aadhaarFile" class="form-control" onchange="resetProgress('aadhaar')">
+          </div>
+          <button class="btn btn-primary w-100 mb-3" onclick="uploadAadhaar()">
+            <i class="bi bi-upload me-2"></i>Upload Aadhaar
+          </button>
+          <div id="aadhaarUploadOutput" class="json-output border"></div>
+          <button class="btn btn-success w-100 mt-3" onclick="saveAadhaar()">
+            <i class="bi bi-save2 me-2"></i>Save Aadhaar
+          </button>
+          <div id="aadhaarSaveOutput" class="json-output border"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAN Section -->
+  <div class="container-flex">
+    <div class="pan-section" id="panSectionContainer">
+      <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center rounded-top-4">
+          <h5 class="mb-0"><i class="bi bi-credit-card-2-front me-2"></i>PAN Card Upload</h5>
+        </div>
+        <div class="card-body p-4">
+          <!-- Progress bar -->
+          <div class="d-flex align-items-center mb-3">
+            <div class="progress flex-grow-1" style="height: 20px;">
+              <div id="panProgress" class="progress-bar bg-info" style="width: 0%"></div>
+            </div>
+            <span id="panStatus" class="progress-status"></span>
+          </div>
+
+          <div class="mb-3">
+            <label for="panFile" class="form-label fw-semibold">Upload PAN File</label>
+            <input type="file" id="panFile" class="form-control" onchange="resetProgress('pan')">
+          </div>
+          <button class="btn btn-primary w-100 mb-3" onclick="uploadPAN()">
+            <i class="bi bi-upload me-2"></i>Upload PAN
+          </button>
+          <div id="panUploadOutput" class="json-output border"></div>
+          <button class="btn btn-success w-100 mt-3" onclick="savePAN()">
+            <i class="bi bi-save2 me-2"></i>Save PAN
+          </button>
+          <div id="panSaveOutput" class="json-output border"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Spinner -->
+  <div id="loadingSpinner" class="text-center my-3" style="display:none;">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p>Fetching your KYC result...</p>
+  </div>
+
+  <!-- Result Modal -->
+  <!-- Result Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 85%;">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title" id="resultModalLabel">KYC Result</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0 result-modal-body">
+        <div class="row g-0 h-100">
+          <!-- Sidebar -->
+          <div class="col-3 border-end bg-light h-100">
+            <div class="list-group list-group-flush h-100" id="resultTabs" role="tablist">
+              <button class="list-group-item list-group-item-action active" id="overview-tab"
+                      data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="bi bi-person-badge me-2"></i> Overview
+              </button>
+              <button class="list-group-item list-group-item-action" id="aadhaar-tab"
+                      data-bs-toggle="tab" data-bs-target="#aadhaarDetails" type="button" role="tab">
+                <i class="bi bi-credit-card-2-front me-2"></i> Aadhaar Details
+              </button>
+              <button class="list-group-item list-group-item-action" id="pan-tab"
+                      data-bs-toggle="tab" data-bs-target="#panDetails" type="button" role="tab">
+                <i class="bi bi-card-text me-2"></i> PAN Details
+              </button>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="col-9 d-flex flex-column h-100 p-0">
+            <div class="tab-content flex-grow-1 overflow-auto p-4" id="resultTabsContent">
+
+              <!-- Overview -->
+              <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <h5 class="mb-3">User Overview</h5>
+                <table class="table table-bordered align-middle">
+                  <tbody>
+                    <tr><th>Username</th><td id="overviewUsername"></td></tr>
+                    <tr><th>Status</th><td><span id="overviewStatus" class="badge bg-info"></span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Aadhaar -->
+              <div class="tab-pane fade" id="aadhaarDetails" role="tabpanel">
+                <h5 class="mb-3">Aadhaar Details</h5>
+                <div class="text-center mb-3">
+                  <!--<img id="aadhaarImage" class="img-fluid rounded border" style="max-height:200px;"> -->
+                  <img id="aadhaarImage" class="img-fluid rounded border" style="max-height:200px; cursor:pointer;" onclick="previewImage(this.src)">
+
+                </div>
+                <table class="table table-bordered align-middle">
+                  <tbody>
+                    <tr><th>Name</th><td id="aadhaarName"></td></tr>
+                    <tr><th>DOB</th><td id="aadhaarDob"></td></tr>
+                    <tr><th>Gender</th><td id="aadhaarGender"></td></tr>
+                    <tr><th>Address</th><td id="aadhaarAddress"></td></tr>
+                    <tr><th>Aadhaar Number</th><td id="aadhaarNumber"></td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- PAN -->
+              <div class="tab-pane fade" id="panDetails" role="tabpanel">
+                <h5 class="mb-3">PAN Details</h5>
+                <div class="text-center mb-3">
+                 <!-- <img id="panImage" class="img-fluid rounded border" style="max-height:200px;"> -->
+                  <img id="panImage" class="img-fluid rounded border" style="max-height:200px; cursor:pointer;" onclick="previewImage(this.src)">
+
+                </div>
+                <table class="table table-bordered align-middle">
+                  <tbody>
+                    <tr><th>Name</th><td id="panName"></td></tr>
+                    <tr><th>Father Name</th><td id="panFatherName"></td></tr>
+                    <tr><th>PAN Number</th><td id="panNumber"></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- modal-body -->
+    </div>
+  </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title" id="imagePreviewModalLabel">Image Preview</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-0">
+        <img id="previewImage" src="" class="img-fluid" style="max-height:80vh;">
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function updateProgress(idPrefix, step, success=true) {
+      const progress = document.getElementById(idPrefix + "Progress");
+      const status = document.getElementById(idPrefix + "Status");
+      if (step === 1) {
+        progress.style.width = "50%";
+        status.innerHTML = success ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle-fill text-danger"></i>';
+      } else if (step === 2) {
+        progress.style.width = "100%";
+        status.innerHTML = success ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-x-circle-fill text-danger"></i>';
+      }
+    }
+    function resetProgress(idPrefix) {
+      document.getElementById(idPrefix + "Progress").style.width = "0%";
+      document.getElementById(idPrefix + "Status").innerHTML = "";
+    }
+
+    let aadhaarData = null;
+    let panData = null;
+
+    // Aadhaar upload
+    async function uploadAadhaar() {
+      const fileInput = document.getElementById('aadhaarFile');
+      if (fileInput.files.length === 0) return alert("Please select a file");
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch('/api/extract', {
+          method: 'POST',
+          headers: { "Authorization": `Bearer ${token}` },
+          body: formData
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          document.getElementById('aadhaarUploadOutput').innerText = data.error || "Error uploading Aadhaar";
+          updateProgress("aadhaar", 1, false);
+          return;
+        }
+        aadhaarData = data;
+        document.getElementById('aadhaarUploadOutput').innerText = JSON.stringify(data, null, 2);
+        updateProgress("aadhaar", 1, true);
+      } catch (err) {
+        console.error(err);
+        alert("Error uploading Aadhaar file");
+        updateProgress("aadhaar", 1, false);
+      }
+    }
+
+    async function saveAadhaar() {
+      if (!aadhaarData) return alert("Please upload Aadhaar first");
+      const jwtToken = localStorage.getItem("token");
+      if (!jwtToken) return alert("JWT token missing!");
+
+      try {
+        const response = await fetch('/save_aadhaar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          body: JSON.stringify(aadhaarData)
+        });
+        const data = await response.json();
+        document.getElementById('aadhaarSaveOutput').innerText = JSON.stringify(data, null, 2);
+        if (!response.ok) {
+          updateProgress("aadhaar", 2, false);
+          return;
+        }
+        updateProgress("aadhaar", 2, true);
+      } catch (err) {
+        console.error(err);
+        alert("Error saving Aadhaar data");
+        updateProgress("aadhaar", 2, false);
+      }
+    }
+
+    // PAN upload
+    async function uploadPAN() {
+      const fileInput = document.getElementById('panFile');
+      if (fileInput.files.length === 0) return alert("Please select a file");
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch('/api/extract_pan', {
+          method: 'POST',
+          headers: { "Authorization": `Bearer ${token}` },
+          body: formData
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          document.getElementById('panUploadOutput').innerText = data.error || "Error uploading PAN";
+          updateProgress("pan", 1, false);
+          return;
+        }
+        panData = data;
+        document.getElementById('panUploadOutput').innerText = JSON.stringify(data, null, 2);
+        updateProgress("pan", 1, true);
+      } catch (err) {
+        console.error(err);
+        alert("Error uploading PAN file");
+        updateProgress("pan", 1, false);
+      }
+    }
+
+    async function savePAN() {
+      if (!panData) return alert("Please upload PAN first");
+      const jwtToken = localStorage.getItem("token");
+      if (!jwtToken) return alert("JWT token missing!");
+
+      try {
+        const response = await fetch('/save_pan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          body: JSON.stringify(panData)
+        });
+        const data = await response.json();
+        document.getElementById('panSaveOutput').innerText = JSON.stringify(data, null, 2);
+        if (!response.ok) {
+          updateProgress("pan", 2, false);
+          return;
+        }
+        updateProgress("pan", 2, true);
+      } catch (err) {
+        console.error(err);
+        alert("Error saving PAN data");
+        updateProgress("pan", 2, false);
+      }
+    }
+
+    // Sidebar
+    function openSidebar() { document.getElementById("sidebar").style.width = "250px"; }
+    function closeSidebar() { document.getElementById("sidebar").style.width = "0"; }
+    function showSection(sectionClass) {
+      document.querySelectorAll(".aadhaar-section, .pan-section, .home-section").forEach(el => el.style.display = "none");
+      document.querySelector("." + sectionClass)
+        ? document.querySelector("." + sectionClass).style.display = "block"
+        : document.getElementById(sectionClass + "Container").style.display = "block";
+      closeSidebar();
+    }
+
+    // ---------- Fetch KYC Result ----------
+    async function fetchResult() {
+      const jwtToken = localStorage.getItem("token");
+      if (!jwtToken) return alert("Please save Aadhaar first to fetch result");
+
+      try {
+        const response = await fetch('/api/user/result', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${jwtToken}` }
+        });
+
+        const res = await response.json();
+
+        if (res.data) {
+          const d = res.data;
+
+          document.getElementById("overviewUsername").innerHTML = `
+            <div class="text-center w-100">
+              <p><b>Fetching KYC result...</b></p>
+              <div class="progress" style="height: 25px;">
+                <div id="progressBar" class="progress-bar bg-info progress-bar-striped progress-bar-animated"
+                     role="progressbar" style="width: 0%;" aria-valuenow="0"
+                     aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          `;
+
+
+          const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+          resultModal.show();
+
+          const progressBar = document.getElementById("progressBar");
+          progressBar.style.width = "0%";
+          progressBar.offsetWidth;
+          progressBar.style.transition = "width 2s linear";
+          progressBar.style.width = "100%";
+
+          setTimeout(() => {
+            // Fill overview
+            document.getElementById("overviewUsername").innerText = d.user_entered_name;
+            document.getElementById("overviewStatus").innerText = d.status;
+
+            // Aadhaar
+            document.getElementById("aadhaarImage").src = d.aadhaar_image;
+            document.getElementById("aadhaarName").innerText = d.aadhaar_name;
+            document.getElementById("aadhaarDob").innerText = d.aadhaar_dob;
+            document.getElementById("aadhaarGender").innerText = d.aadhaar_gender;
+            document.getElementById("aadhaarAddress").innerText = d.aadhaar_address;
+            document.getElementById("aadhaarNumber").innerText = d.aadhaar_number;
+
+            // PAN
+            document.getElementById("panImage").src = d.pan_image;
+            document.getElementById("panName").innerText = d.pan_name;
+            document.getElementById("panFatherName").innerText = d.pan_father_name;
+            document.getElementById("panNumber").innerText = d.pan_number;
+          }, 2200);
+
+        } else {
+          alert(res.message || "No KYC record found");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error fetching KYC result");
+      }
+    }
+
+    function previewImage(src) {
+      const previewImg = document.getElementById("previewImage");
+      previewImg.src = src;
+      const imageModal = new bootstrap.Modal(document.getElementById("imagePreviewModal"));
+      imageModal.show();
+    }
+
+
+    // ---------- Logout ----------
+    async function logout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+      } catch (err) {
+        console.error(err);
+      }
+      jwtToken = null;
+      window.location.href = "/";
+    }
+
+  </script>
+</body>
+</html>

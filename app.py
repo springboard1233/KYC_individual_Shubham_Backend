@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import smtplib, ssl
 from fuzzywuzzy import fuzz
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer, util
+#from sentence_transformers import SentenceTransformer, util
 from bson import ObjectId
 from datetime import datetime#, timezone, timedelta
 from pytz import timezone
@@ -19,10 +19,10 @@ from torch_geometric.nn import GCNConv
 
 
 #import torchvision.models as models
-from torchvision.models import resnet50, ResNet50_Weights
-import torchvision.transforms as transforms
+#from torchvision.models import resnet50, ResNet50_Weights
+#import torchvision.transforms as transforms
 from PIL import Image
-from sklearn.metrics.pairwise import cosine_similarity
+#from sklearn.metrics.pairwise import cosine_similarity
 
 
 from pdf2image import convert_from_bytes
@@ -32,7 +32,7 @@ from rapidfuzz import fuzz
 
 import joblib
 
-load_dotenv()  # loads .env file
+#load_dotenv()  # loads .env file
 
 #from dotenv import load_dotenv
 #from sendgrid import SendGridAPIClient
@@ -59,7 +59,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 #load_dotenv()
 
 # ---------------- MongoDB Setup ----------------
-client = MongoClient("mongodb://localhost:27017/")
+
+# Get MongoDB URI from environment variables
+mdburi = os.getenv("MONGODB_URI")
+
+client = MongoClient(mdburi)
+#client = MongoClient("mongodb://localhost:27017/")
 db = client['aadhaar_db']
 aadhaar_audit = db['aadhaar_audit_trail']
 pan_audit = db['pan_audit_trail']
@@ -97,59 +102,6 @@ def logout():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
-
-
-
-
-# ---------- Helper: Send Email with SendGrid ----------
-#def send_email1(receiver_email, otp):
-#    message = Mail(
-#        from_email="shubham.19jdai037@gmail.com",   # must be verified in SendGrid
-#        to_emails=receiver_email,
-#        subject="Your OTP Code",
-#        html_content=f"<strong>Your OTP is {otp}. It is valid for 2 minutes.</strong>"
-#    )
-#    try:
-#        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-#        response = sg.send(message)
-#        print("Email sent:", response.status_code)  # should be 202
-#        return True
-#    except Exception as e:
-#        print("Error sending email:", e)
-#        return False
-
-# save files to upload
-
-
-# Pretrained CNN (ResNet50 as feature extractor)
-#cnn_model = models.resnet50(pretrained=True)
-cnn_model = resnet50(weights=ResNet50_Weights.DEFAULT)
-cnn_model.fc = nn.Identity()
-cnn_model.eval()
-
-transform = transforms.Compose([
-    transforms.Resize((224,224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
-])
-
-def get_embedding(img_path):
-    img = Image.open(img_path).convert("RGB")
-    img = transform(img).unsqueeze(0)
-    with torch.no_grad():
-        emb = cnn_model(img)
-    return emb.numpy()
-
-
-
-
-
-# Precompute reference embeddings
-AADHAAR_TEMPLATE = get_embedding("layout/aadhaar_card.png")
-PAN_TEMPLATE = get_embedding("layout/pan_card.png")
-
-
-
 
 from werkzeug.utils import secure_filename
 
@@ -566,27 +518,12 @@ def serialize_audit(doc):
 @app.route("/api/admin/user/<user_id>", methods=["GET"])
 @admin_required
 def admin_user_details(user_id):
-    # Admin token check
-    #auth_header = request.headers.get("Authorization")
-    #if not auth_header or not auth_header.startswith("Bearer "):
-    #    return jsonify({"error": "Missing or invalid token"}), 401
 
-    #token = auth_header.split(" ")[1]
-    #_, role = decode_token(token)
-
-    #if role != "admin":
-    #    return jsonify({"error": "Unauthorized"}), 403
 
     user = kyc_col.find_one({"user_id": user_id}, {"_id": 0})
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # Fetch Aadhaar Audit Trails
-    #aadhaar_audit_trails = list(aadhaar_audit.find({"user_id": user_id}, {"_id": 0}))
-    #print(aadhaar_audit_trails)
-    # Fetch PAN Audit Trails
-    #pan_audit_trails = list(pan_audit.find({"user_id": user_id}, {"_id": 0}))
-    #print(pan_audit_trails)
 
     aadhaar_audit_trails = [serialize_audit(d) for d in aadhaar_audit.find({"user_id": user_id})]
     pan_audit_trails = [serialize_audit(d) for d in pan_audit.find({"user_id": user_id})]
@@ -599,45 +536,7 @@ def admin_user_details(user_id):
     return jsonify(serialize_doc(user))
 
 
-#@app.route("/api/admin/update_status", methods=["POST"])
-#@admin_required
-#def update_status():
-#    data = request.get_json()
-#    user_id = data.get("user_id")
-#    status = data.get("status")
-#    if status not in ["Pending", "Approved", "Rejected"]:
-#        return jsonify({"error": "Invalid status"}), 400
-
-#    result = kyc_col.update_one({"user_id": user_id}, {"$set": {"status": status}})
-#    if result.matched_count == 0:
-#        return jsonify({"error": "User not found"}), 404
-#    return jsonify({"message": f"Status updated to {status}"})
-
-
-#@app.route("/api/admin/update_status", methods=["POST"])
-#@admin_required
-#def update_status():
-#    data = request.get_json()
-#    user_id = data.get("user_id")
-#    status = data.get("status")
-
-#    if status not in ["Pending", "Approved", "Rejected"]:
-#        return jsonify({"error": "Invalid status"}), 400
-
-    # Update KYC status
-#    result = kyc_col.update_one({"user_id": user_id}, {"$set": {"status": status}})
-#    if result.matched_count == 0:
-#        return jsonify({"error": "User not found"}), 404
-
-
-    # Get user email
-    #user = users_collection.find_one({"user_id": user_id})
-#    user = users_collection.find_one({"_id": ObjectId(user_id)})
-    # user = users_collection.find_one({"_id":user_id})
-#    if user and "email" in user:
-#        send_status_email(user["email"], status)
-
-#    return jsonify({"message": f"Status updated to {status}"})
+    return jsonify({"error": "Invalid status"}), 400
 
 
 @app.route("/api/admin/update_status", methods=["POST"])
@@ -739,7 +638,7 @@ def extract_aadhaar():
         file.save(filepath)
 
         # Process image
-        uploaded_emb = get_embedding(filepath)
+        #uploaded_emb = get_embedding(filepath)
 
     elif ext in ALLOWED_PDF_EXT:
         # Convert PDF in memory to JPG
@@ -760,15 +659,15 @@ def extract_aadhaar():
         first_page.save(filepath, 'JPEG')
 
         # Process converted image
-        uploaded_emb = get_embedding(filepath)
+        #uploaded_emb = get_embedding(filepath)
 
     else:
         return jsonify({"error": "Unsupported file type"}), 400
 
     #uploaded_emb = get_embedding(filepath)
-    sim = cosine_similarity(AADHAAR_TEMPLATE, uploaded_emb)[0][0]
-    sim  = float(sim)
-    print("Similarity:", sim)
+    #sim = cosine_similarity(AADHAAR_TEMPLATE, uploaded_emb)[0][0]
+    #sim  = float(sim)
+    #print("Similarity:", sim)
 
 
 
@@ -777,7 +676,7 @@ def extract_aadhaar():
     text = extract_rawtxt(filepath)
     data = extract_details(text)
 
-    data["layout"] = sim
+    #data["layout"] = sim
 
     # Save extracted data in DB
     kyc_col.update_one(
@@ -880,7 +779,7 @@ def save_aadhaar():
     if fraud_score > 100:
         fraud_score = 100
 
-    layout = "valid" if (data.get("layout",0)) > 0.75 else "Not_Valid"
+    #layout = "valid" if (data.get("layout",0)) > 0.75 else "Not_Valid"
     # 5. Build Aadhaar object
     aadhaar_obj = {
         "aadhaar_name": data.get("Name", ""),
@@ -893,8 +792,8 @@ def save_aadhaar():
         "duplicate_found": bool(duplicate),
         "fraud_score": fraud_score,
         "aadhar_manipulation": issues,
-        "AadhaarName_username":username_match_aadhaar,
-        "Aadhaar_Layout": layout
+        "AadhaarName_username":username_match_aadhaar
+        #"Aadhaar_Layout": layout
     }
 
     # 6. Record to save
@@ -950,19 +849,6 @@ def save_aadhaar():
 
 
 
-#@app.route('/api/extract_pan', methods=['POST'])
-#def extract_pan():
-#    file = request.files['file']
-#    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-#    file.save(filepath)
-
-    #from ocr.ocr_ex import extract_pantxt
-    #from ocr.f import pan_details
-
-#    text = extract_pantxt(filepath)
-#    data = pan_details(text)
-#    return jsonify(data)
-
 @app.route('/api/extract_pan', methods=['POST'])
 def extract_pan():
     # 1. Extract JWT from header
@@ -1008,7 +894,7 @@ def extract_pan():
         file.save(filepath)
 
         # Process image
-        uploaded_emb = get_embedding(filepath)
+        #uploaded_emb = get_embedding(filepath)
 
     elif ext in ALLOWED_PDF_EXT:
         # Convert PDF in memory to JPG
@@ -1029,14 +915,14 @@ def extract_pan():
         first_page.save(filepath, 'JPEG')
 
         # Process converted image
-        uploaded_emb = get_embedding(filepath)
+        #uploaded_emb = get_embedding(filepath)
 
     else:
         return jsonify({"error": "Unsupported file type"}), 400
 
 
-    sim = cosine_similarity(PAN_TEMPLATE, uploaded_emb)[0][0]
-    print("Similarity:", sim)
+    #sim = cosine_similarity(PAN_TEMPLATE, uploaded_emb)[0][0]
+    #print("Similarity:", sim)
 
 
 
@@ -1044,7 +930,7 @@ def extract_pan():
     text = extract_pantxt(filepath)       # your OCR function
     data = pan_details(text)              # your parser
 
-    data["layout"] = float(sim)
+    #data["layout"] = float(sim)
     # 5. Save extracted data in DB
     kyc_col.update_one(
         {"user_id": user_id},
@@ -1130,7 +1016,7 @@ def save_pan():
     if fraud_score > 100:
         fraud_score = 100
 
-    layout = "valid" if (data.get("layout",0)) > 0.75 else "Not_Valid"
+    #layout = "valid" if (data.get("layout",0)) > 0.75 else "Not_Valid"
 
     # 5. PAN object
     pan_obj = {
@@ -1142,8 +1028,8 @@ def save_pan():
         "duplicate_found": bool(duplicate),
         "fraud_score": fraud_score,
         "pan_manipulation": issues,
-        "panName_username": username_match_pan,
-        "pan_layout": layout
+        "panName_username": username_match_pan
+        #"pan_layout": layout
     }
 
 
@@ -1158,13 +1044,18 @@ def save_pan():
     aadhaar_name = existing.get("aadhaar", {}).get("aadhaar_name", "")
     pan_name = pan_obj.get("pan_name", "")
 
+    username_match_pan = fuzz.token_set_ratio(aadhaar_name, pan_name)
+    aadhaarname_panname = match_label(username_match_pan)
+
+
     #name_on_aadhaar_pan = fuzz.token_set_ratio(aadhaar_name,data.get("Name",""))
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    embeddings = model.encode([aadhaar_name, pan_name], convert_to_tensor=True)
-    similarity = util.cos_sim(embeddings[0], embeddings[1])
+    #model = SentenceTransformer("all-MiniLM-L6-v2")
+    #embeddings = model.encode([aadhaar_name, pan_name], convert_to_tensor=True)
+    #similarity = util.cos_sim(embeddings[0], embeddings[1])
 
 
-    existing["AadhaarName_panName"] = "Match" if similarity >= 0.75 else "Not Match"#match_label(name_on_aadhaar_pan)
+    #existing["AadhaarName_panName"] = "Match" if similarity >= 0.75 else "Not Match"#match_label(name_on_aadhaar_pan)
+    existing["AadhaarName_panName"] = aadhaarname_panname
 
     score, risk = compute_fraud_score(existing.get("aadhaar"), pan_obj)
     existing["overall_score"] = score
@@ -1284,31 +1175,6 @@ def fetch_records():
 
 # =============== SIGNUP APIs ===============
 
-#@app.route('/api/signup', methods=['POST'])
-#def signup():
-#    data = request.get_json()
-#    firstname = data.get("firstname")
-#    lastname = data.get("lastname")
-#    email = data.get("email")
-#    password = data.get("password")
-
-    # Check if user with the email already exists
-#    if users_collection.find_one({"email": email}):
-#        return jsonify({"message": "Email already exists"}), 400
-
-#    otp = str(random.randint(100000, 999999))
-#    otp_doc = {
-#        "email": email,
-#        "firstname": firstname,
-#        "lastname": lastname,
-#        "password": generate_password_hash(password),
-#        "otp": otp,
-#        "time": time.time()
-#    }
-#    otp_collection.update_one({"email": email}, {"$set": otp_doc}, upsert=True)
-
-#    send_email(email, otp)
-#    return jsonify({"message": "OTP sent to email. Please verify."})
 
 @app.route('/api/signup', methods=['POST'])
 def signup():
@@ -1445,5 +1311,10 @@ def resend_login_otp():
     return jsonify({"message": "Login OTP resent successfully!"})
 
 # ---------- Run Flask ----------
-if __name__ == '__main__':
-    app.run(debug=True)
+#if __name__ == '__main__':
+#    app.run(debug=True)
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
