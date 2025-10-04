@@ -2,16 +2,11 @@
 # Upgrade pip
 pip install --upgrade pip
 
-#  Install PyTorch CPU (latest compatible with PyG)
-pip install torch==2.1.1+cpu torchvision==0.16.1+cpu torchaudio==2.1.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+# Install PyTorch (CPU only)
+pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2
 
-# Install PyG CPU dependencies
-pip install torch-scatter==2.1.2+pt21cpu \
-            torch-sparse==0.6.18+pt21cpu \
-            torch-cluster==1.6.3+pt21cpu \
-            torch-spline-conv==1.2.2+pt21cpu \
-            torch-geometric==2.6.1 \
-            -f https://data.pyg.org/whl/torch-2.1.1+cpu.html
+# Install PyG dependencies (match PyTorch 2.1.2)
+pip install torch-geometric==2.6.1
 
-#  Install the rest of your dependencies (no NumPy in requirements.txt)
+# Install the rest of your dependencies
 pip install -r requirements.txt
