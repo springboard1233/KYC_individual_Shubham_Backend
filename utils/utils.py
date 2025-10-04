@@ -6,7 +6,8 @@ import pytesseract
 from PIL import Image
 from pymongo import MongoClient
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+#pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 # ---------------- Aadhaar Verhoeff ----------------
 d_table = [
